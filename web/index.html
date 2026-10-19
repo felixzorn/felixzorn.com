@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Felix Zorn · Backend Developer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23ff8a3d%27/%3E%3Cpath d=%27M7 18h18l-3 5H10z%27 fill=%27%23fff%27/%3E%3C/svg%3E">
+<meta name="description" content="Felix Zorn, backend developer for Go and PHP. A portfolio as an island journey.">
+<meta name="theme-color" content="#0d2229">
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;700;800;900&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Kalam:wght@400;700&display=swap">
+<style>
+/* Layout: full-screen sea with islands; brand + local time top-left, sea chart (minimap) bottom-right, island index bottom-centre, content in a side sheet (bottom sheet on phones) */
+:root{
+  color-scheme: dark;
+  --deep:#0d2229; --panel:#10262e; --raise:#173540; --line:#24434f;
+  --fg:#f3efe5; --muted:#a9b8b6; --buoy:#ff8a3d; --buoy-ink:#2a1505; --sand:#f1dcae; --plank:#7a4f2e; --plank2:#8d5d37;
+  --f-display:"Gabarito", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  --f-hand:"Kalam", "Comic Sans MS", cursive;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--deep);color:var(--fg);font-family:var(--f-body);overflow:hidden;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--buoy);outline-offset:3px}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+
+.brand{position:fixed;z-index:5;top:calc(env(safe-area-inset-top,0px) + 20px);left:max(22px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.brand > *{pointer-events:auto}
+.brand strong{font:900 24px/1 var(--f-display);letter-spacing:-.015em;text-shadow:0 2px 12px rgba(0,0,0,.35)}
+.brand .role{font:12px var(--f-mono);color:var(--fg);opacity:.85;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+.tod{display:flex;align-items:center;gap:10px;margin-top:4px;font:13px var(--f-body);background:rgba(13,34,41,.62);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:5px 6px 5px 12px;align-self:flex-start;backdrop-filter:blur(6px)}
+.tod button{font:600 12px var(--f-body);background:rgba(255,255,255,.12);border:0;border-radius:999px;padding:4px 10px;cursor:pointer}
+.tod button:hover{background:rgba(255,255,255,.2)}
+.classic-link{position:fixed;z-index:5;top:calc(env(safe-area-inset-top,0px) + 22px);right:calc(max(22px,env(safe-area-inset-right,0px)) + 112px);font:500 14px var(--f-body);color:var(--fg);background:rgba(13,34,41,.62);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 14px;cursor:pointer;backdrop-filter:blur(6px)}
+
+.lang{position:fixed;z-index:13;top:calc(env(safe-area-inset-top,0px) + 22px);right:max(22px,env(safe-area-inset-right,0px));display:flex;gap:2px;padding:3px;background:rgba(13,34,41,.62);border:1px solid rgba(255,255,255,.12);border-radius:999px;backdrop-filter:blur(6px)}
+.lang button{font:600 13px var(--f-body);background:none;border:0;border-radius:999px;padding:5px 10px;cursor:pointer;color:var(--fg)}
+.lang button:hover{background:rgba(255,255,255,.1)}
+.lang button[aria-pressed="true"]{background:var(--buoy);color:var(--buoy-ink)}
+
+nav.index{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);display:flex;gap:6px;background:rgba(13,34,41,.72);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:5px;backdrop-filter:blur(6px);white-space:nowrap}
+nav.index button{font:600 14px var(--f-body);background:none;border:0;border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--fg)}
+nav.index button:hover{background:rgba(255,255,255,.1)}
+nav.index button[aria-current="true"]{background:var(--buoy);color:var(--buoy-ink)}
+
+.chart{position:fixed;z-index:5;right:max(22px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:150px;height:150px;border-radius:50%;border:3px solid #e9d7b0;box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer;background:#cfe6e2}
+.chart-label{position:fixed;z-index:5;right:max(22px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 174px);width:150px;text-align:center;font:700 14px var(--f-hand);color:var(--fg);text-shadow:0 1px 6px rgba(0,0,0,.5)}
+
+.signs[hidden]{display:none}
+.sign{position:fixed;left:0;top:0;z-index:3;border:0;padding:0;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;will-change:transform}
+.sign b{display:block;font:700 16px/1.1 var(--f-hand);color:#fbefd8;background:linear-gradient(180deg,var(--plank2),var(--plank));padding:7px 12px 6px;border-radius:3px;box-shadow:0 6px 14px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.2);white-space:nowrap}
+.sign small{display:block;font:500 11px var(--f-body);color:#f5dfba;opacity:.9;margin-top:1px}
+.sign i{display:block;width:4px;height:16px;background:#5c3a20}
+.sign:hover b,.sign.hot b{background:linear-gradient(180deg,#a06a3e,#86542f)}
+
+.hint{position:fixed;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 80px);font:700 16px var(--f-hand);color:var(--fg);text-shadow:0 1px 8px rgba(0,0,0,.6);text-align:center;max-width:calc(100% - 40px)}
+.dock-prompt{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);font:700 16px var(--f-body);background:var(--buoy);color:var(--buoy-ink);border:0;border-radius:999px;padding:12px 20px;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.35);display:flex;gap:10px;align-items:center;white-space:nowrap}
+.dock-prompt kbd{font:600 12px var(--f-mono);background:rgba(42,21,5,.14);border-radius:4px;padding:2px 6px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 22px);transform:translateX(-50%);z-index:9;background:var(--sand);color:#3a2a10;font:700 17px/1.35 var(--f-hand);padding:10px 16px;border-radius:4px;max-width:min(440px,calc(100% - 32px));box-shadow:0 10px 24px rgba(0,0,0,.35);text-align:center}
+
+.panel{position:fixed;z-index:6;top:0;right:0;bottom:0;width:min(460px,100%);box-sizing:border-box;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .55s cubic-bezier(.2,.75,.2,1),visibility 0s .55s;visibility:hidden}
+.panel.open{transform:none;visibility:visible;transition:transform .55s cubic-bezier(.2,.75,.2,1)}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 18px) max(24px,env(safe-area-inset-right,0px)) 12px 28px}
+.panel-body{flex:1;overflow-y:auto;padding:8px max(28px,env(safe-area-inset-right,0px)) 32px 28px;display:flex;flex-direction:column;gap:18px}
+.panel-foot{display:flex;justify-content:space-between;gap:10px;padding:14px max(24px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 14px) 28px;border-top:1px solid var(--line)}
+.panel-foot button{font:500 14px var(--f-body);background:none;border:0;color:var(--muted);cursor:pointer;padding:6px 0}
+.panel-foot button:hover{color:var(--fg)}
+.leave{font:600 14px var(--f-body);background:var(--raise);border:0;border-radius:8px;color:var(--fg);cursor:pointer;padding:8px 14px}
+.leave:hover{background:#1e4250}
+.where{font:15px var(--f-hand);color:var(--muted)}
+
+.content .kicker{font:700 19px var(--f-hand);color:var(--buoy);display:inline-block;transform:rotate(-1.5deg);transform-origin:left}
+.content h2{margin:-6px 0 0;font:900 clamp(30px,3.4vw,40px)/1.02 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.content h3{margin:0;font:700 20px/1.2 var(--f-display)}
+.content p{margin:0;line-height:1.62;font-size:16.5px;max-width:62ch}
+.content .lead{font-size:19px;line-height:1.5}
+.muted{color:var(--muted)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;margin:6px 0 0}
+.facts div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.facts dt{font:11px var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.facts dd{margin:0;font:600 16px var(--f-body)}
+.proj{border-top:1px solid var(--line);padding-top:20px;display:flex;flex-direction:column;gap:8px}
+.metric{font:900 32px/1 var(--f-display);color:var(--sand);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.metric small{display:block;font:400 14px/1.4 var(--f-body);color:var(--muted);letter-spacing:0;margin-top:5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font:12px var(--f-mono);background:var(--raise);padding:3px 8px;border-radius:3px;color:#d3dedb}
+.lnk{font:600 15px var(--f-body);color:#8fdcf0;text-decoration:none;align-self:flex-start}
+.lnk:hover{text-decoration:underline}
+.tl{list-style:none;margin:6px 0 0 6px;padding:0;border-left:2px dotted #3b5f6b;display:flex;flex-direction:column;gap:24px}
+.tl > li{padding-left:22px;position:relative;display:flex;flex-direction:column;gap:4px}
+.tl > li::before{content:"";position:absolute;left:-8px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--buoy)}
+.tl > li.next::before{background:var(--panel);border:2px dashed var(--buoy);width:10px;height:10px}
+.when{font:12px var(--f-mono);color:var(--muted)}
+.tl ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px;color:#d3dedb;font-size:15px;line-height:1.5}
+.hand{font:700 22px var(--f-hand);color:var(--buoy)}
+.skill{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center;border-top:1px solid var(--line);padding:14px 0}
+.skill strong{font:700 19px var(--f-display)}
+.skill .d{grid-column:1 / -1;color:var(--muted);font-size:15px}
+.meter{display:flex;gap:3px;align-items:center}
+.meter i{width:10px;height:10px;border-radius:2px;background:#24434f}
+.meter i.on{background:var(--buoy)}
+.meter span{font:12px var(--f-mono);color:var(--muted);margin-left:8px;font-variant-numeric:tabular-nums}
+.mail{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--raise);border-radius:8px;padding:14px 16px}
+.mail code{font:15px var(--f-mono);user-select:all;word-break:break-all;flex:1;min-width:0}
+.btn{font:600 15px var(--f-body);padding:11px 18px;border-radius:8px;border:0;background:var(--raise);color:var(--fg);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn.primary{background:var(--buoy);color:var(--buoy-ink)}
+.btn:hover{filter:brightness(1.08)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+
+.intro{position:fixed;inset:0;z-index:10;display:flex;align-items:center;background:linear-gradient(90deg,rgba(8,22,27,.9) 0%,rgba(8,22,27,.62) 40%,rgba(8,22,27,0) 72%);padding:24px max(24px,env(safe-area-inset-right,0px)) 24px max(24px,env(safe-area-inset-left,0px));transition:opacity .9s}
+.intro.out{opacity:0;pointer-events:none}
+.intro-in{max-width:520px;display:flex;flex-direction:column;gap:20px;align-items:flex-start;margin-left:clamp(0px,5vw,72px)}
+.intro .kicker{font:700 21px var(--f-hand);color:var(--buoy);transform:rotate(-2deg);display:inline-block}
+.intro h1{margin:-8px 0 0;font:900 clamp(52px,8vw,104px)/.9 var(--f-display);letter-spacing:-.035em}
+.intro p{margin:0;font-size:clamp(17px,1.8vw,20px);line-height:1.55;color:#dfe8e5;max-width:40ch}
+.intro .small{font:12px var(--f-mono);color:var(--muted)}
+.textbtn{font:500 15px var(--f-body);background:none;border:0;border-bottom:1px solid #4b6b74;color:var(--muted);cursor:pointer;padding:2px 0}
+.textbtn:hover{color:var(--fg)}
+
+.classic-view{position:fixed;inset:0;z-index:12;background:var(--deep);overflow-y:auto}
+.classic-in{max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 32px) max(20px,env(safe-area-inset-right,0px)) 72px max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:22px}
+.classic-in section{display:flex;flex-direction:column;gap:16px;border-top:1px solid var(--line);padding-top:30px}
+.classic-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.classic-top strong{font:900 24px var(--f-display)}
+
+@media (max-width:760px){
+  .brand strong{font-size:20px}
+  .tod{font-size:12px}
+  .tod span{max-width:150px}
+  nav.index{left:0;right:0;transform:none;border-radius:0;border-left:0;border-right:0;bottom:0;padding:6px max(10px,env(safe-area-inset-left,0px)) calc(env(safe-area-inset-bottom,0px) + 6px);overflow-x:auto;scrollbar-width:none}
+  nav.index::-webkit-scrollbar{display:none}
+  .chart{width:84px;height:84px;top:calc(env(safe-area-inset-top,0px) + 126px);bottom:auto;border-width:2px}
+  .chart-label{display:none}
+  .hint{bottom:calc(env(safe-area-inset-bottom,0px) + 70px);font-size:15px}
+  .dock-prompt{bottom:calc(env(safe-area-inset-bottom,0px) + 72px)}
+  .dock-prompt kbd{display:none}
+  .panel{top:auto;left:0;width:auto;height:62%;border-left:0;border-top:1px solid var(--line);border-radius:16px 16px 0 0;transform:translateY(102%)}
+  .panel-head{padding-top:14px}
+  body.panel-open nav.index,body.panel-open .hint,body.panel-open .dock-prompt{display:none}
+  .sign b{font-size:13px;padding:5px 9px 4px}
+  .sign small{display:none}
+  .intro{background:linear-gradient(0deg,rgba(8,22,27,.95) 0%,rgba(8,22,27,.72) 55%,rgba(8,22,27,.15) 100%);align-items:flex-end}
+  .intro-in{margin:0 0 5vh}
+  .classic-top{padding-right:96px}
+}
+@media (min-width:761px){.panel-head{padding-right:124px}}
+@media (prefers-reduced-motion:reduce){.panel,.panel.open,.intro{transition:none}}
+</style>
+
+<canvas id="gl" data-i18n-aria="canvasAria" aria-label="Island world: a boat sails to five islands, each island is part of the portfolio." tabindex="-1"></canvas>
+
+<div class="brand">
+  <strong id="bName">Felix Zorn</strong>
+  <span class="role" id="bRole">Backend Developer · Go &amp; PHP</span>
+  <div class="tod"><span id="todTxt" data-i18n="todLocal">Local time</span><button type="button" id="todBtn" data-i18n="todChange">Change time of day</button></div>
+</div>
+<button class="classic-link" type="button" id="classicBtn" data-i18n="classic">Classic view</button>
+<div class="lang" role="group" data-i18n-aria="langLabel" aria-label="Language"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="de" aria-pressed="false">DE</button></div>
+<div class="chart-label" data-i18n="chartLabel">Sea chart</div>
+<canvas class="chart" id="chart" width="300" height="300" data-i18n-aria="chartAria" aria-label="Sea chart: click an island to sail there"></canvas>
+<nav class="index" id="nav" data-i18n-aria="navAria" aria-label="Islands"></nav>
+<div class="signs" id="signs" hidden></div>
+<div class="hint" id="hint" hidden></div>
+<button class="dock-prompt" id="dockPrompt" type="button" hidden></button>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<aside class="panel" id="panel" aria-hidden="true">
+  <div class="panel-head"><button class="leave" type="button" id="leaveBtn" data-i18n="leave">⚓ Cast off</button><span class="where" id="pWhere"></span></div>
+  <div class="panel-body content" id="pBody"></div>
+  <div class="panel-foot"><button type="button" id="prevBtn"></button><button type="button" id="nextBtn"></button></div>
+</aside>
+
+<div class="intro" id="intro">
+  <div class="intro-in">
+    <span class="kicker" id="introKicker">Ahoy! Glad you are on board.</span>
+    <h1 id="iName">Felix Zorn</h1>
+    <p id="introText">Backend developer for Go and PHP. Five islands, five chapters. Steer the boat yourself or just click an island, and I will go ashore for you.</p>
+    <div class="row" style="align-items:center;gap:20px">
+      <button class="btn primary" type="button" id="enterBtn" disabled>One moment …</button>
+      <button class="textbtn" type="button" id="introClassic" data-i18n="introClassic">read it classic instead</button>
+    </div>
+  </div>
+</div>
+
+<div class="classic-view" id="classic" hidden><div class="classic-in content" id="classicBody"></div></div>
+
+<script src="vendor/three.min.js"></script>
+<script>window.THREE||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>')</script>
+<script>
+// ===================== Inhalte (Beispiele) =====================
+// Deine Texte, je Sprache. Schlüssel (titel, wirkung, …) bleiben unverändert.
+const SHARED={
+  email:'mail@felixzorn.com',
+  me:{skin:'#efc29b', hair:'#3a2618', top:'#ff8a3d', pants:'#2c3e50'},   // deine Figur (gilt für beide Sprachen)
+  links:[['GitHub','github.com/deinname','https://github.com/'],['LinkedIn','linkedin.com/in/deinname','https://www.linkedin.com/']]
+};
+const CONTENT={
+  de:{
+    name:'Felix Zorn', role:'Backend Developer · Go & PHP',
+    intro:{kicker:'Ahoi! Schön, dass du an Bord bist.', text:'Backend Developer für Go und PHP. Fünf Inseln, fünf Kapitel. Steuer das Boot selbst oder klick einfach eine Insel an, ich gehe dann für dich an Land.'},
+    about:[
+      'Ich baue Backends, die nachts durchlaufen: APIs, Microservices und Datenpipelines, vor allem in Go und PHP.',
+      'Mich reizen saubere Schnittstellen, schnelle Queries und Systeme, die auch unter Last ruhig bleiben. Am liebsten arbeite ich in kleinen Teams, die selbst betreiben, was sie bauen.'
+    ],
+    facts:[['Erfahrung','8 Jahre Backend'],['Sprachen','Go, PHP'],['Standort','Köln · remote'],['Verfügbar','ab Januar 2027']],
+    projects:[
+      {t:'Ratelimit',m:'< 2 ms',mi:'p99-Latenz bei 40.000 Requests pro Sekunde',d:'Verteilter Rate Limiter als Go-Service mit Redis-Backend. Schützt die Zahlungs-API vor Lastspitzen.',s:['Go','Redis','gRPC'],u:'https://github.com/'},
+      {t:'Shop API',m:'1,8 s → 240 ms',mi:'Checkout-Zeit nach Umbau auf asynchrone Verarbeitung',d:'REST-API für einen Online-Shop mit Symfony und Doctrine. Bestellungen laufen über eine Queue.',s:['PHP','Symfony','PostgreSQL','RabbitMQ'],u:'https://github.com/'},
+      {t:'Logpipe',m:'3 Mio.',mi:'Logzeilen pro Tag aus 14 Services',d:'CLI-Tool in Go, das Server-Logs einsammelt, filtert und an Grafana Loki weiterreicht.',s:['Go','Docker','Loki'],u:'https://github.com/'}
+    ],
+    exp:[
+      {y:'2023 – heute',r:'Backend Developer (Go)',c:'Beispiel GmbH',p:['Microservices für die Zahlungsabwicklung, bis 40.000 Requests/s','Event-Queue statt Cronjobs, Fehlerquote um 90 % gesenkt']},
+      {y:'2019 – 2023',r:'PHP Developer',c:'Agentur Muster',p:['Über 20 Kundenprojekte mit Symfony und Laravel','Legacy-Code von PHP 5.6 auf PHP 8 migriert']},
+      {y:'2016 – 2019',r:'Ausbildung Fachinformatiker',c:'Musterfirma AG',p:['Erste produktive Schnittstellen, erste Nachtschicht nach einem Deploy']}
+    ],
+    skills:[
+      {n:'Go',y:6,d:'Microservices, CLIs, gRPC',c:'#3f8fa6'},
+      {n:'PHP',y:10,d:'Symfony, Laravel, PHPUnit',c:'#6c6aa8'},
+      {n:'PostgreSQL',y:8,d:'Schema-Design, Query-Tuning',c:'#3b5f86'},
+      {n:'Redis',y:5,d:'Caching, Rate Limiting, Queues',c:'#b0473c'},
+      {n:'Docker',y:6,d:'Compose, CI-Builds, Kubernetes-Basics',c:'#3c79a6'},
+      {n:'Monitoring',y:4,d:'Prometheus, Grafana, Loki',c:'#c27a34'}
+    ],
+    contact:'Du suchst jemanden für dein Backend, eine API oder einen Umbau, der nicht länger warten kann? Schreib mir, ich antworte innerhalb von 24 Stunden.',
+    avail:'Ab Januar 2027, remote oder in Köln.'
+  },
+  en:{
+    name:'Felix Zorn', role:'Backend Developer · Go & PHP',
+    intro:{kicker:'Ahoy! Glad you are on board.', text:'Backend developer for Go and PHP. Five islands, five chapters. Steer the boat yourself or just click an island, and I will go ashore for you.'},
+    about:[
+      'I build backends that keep running through the night: APIs, microservices and data pipelines, mostly in Go and PHP.',
+      'I enjoy clean interfaces, fast queries and systems that stay calm under load. I work best in small teams that run what they build themselves.'
+    ],
+    facts:[['Experience','8 years backend'],['Languages','Go, PHP'],['Location','Cologne · remote'],['Available','from January 2027']],
+    projects:[
+      {t:'Ratelimit',m:'< 2 ms',mi:'p99 latency at 40,000 requests per second',d:'Distributed rate limiter as a Go service with a Redis backend. Protects the payment API from load spikes.',s:['Go','Redis','gRPC'],u:'https://github.com/'},
+      {t:'Shop API',m:'1.8 s → 240 ms',mi:'checkout time after switching to asynchronous processing',d:'REST API for an online shop with Symfony and Doctrine. Orders run through a queue.',s:['PHP','Symfony','PostgreSQL','RabbitMQ'],u:'https://github.com/'},
+      {t:'Logpipe',m:'3M',mi:'log lines per day from 14 services',d:'CLI tool in Go that collects server logs, filters them and forwards them to Grafana Loki.',s:['Go','Docker','Loki'],u:'https://github.com/'}
+    ],
+    exp:[
+      {y:'2023 – now',r:'Backend Developer (Go)',c:'Beispiel GmbH',p:['Microservices for payment processing, up to 40,000 requests/s','Event queue instead of cron jobs, error rate cut by 90%']},
+      {y:'2019 – 2023',r:'PHP Developer',c:'Agentur Muster',p:['Over 20 client projects with Symfony and Laravel','Migrated legacy code from PHP 5.6 to PHP 8']},
+      {y:'2016 – 2019',r:'Apprenticeship (IT specialist)',c:'Musterfirma AG',p:['First production interfaces, first night shift after a deploy']}
+    ],
+    skills:[
+      {n:'Go',y:6,d:'Microservices, CLIs, gRPC',c:'#3f8fa6'},
+      {n:'PHP',y:10,d:'Symfony, Laravel, PHPUnit',c:'#6c6aa8'},
+      {n:'PostgreSQL',y:8,d:'Schema design, query tuning',c:'#3b5f86'},
+      {n:'Redis',y:5,d:'Caching, rate limiting, queues',c:'#b0473c'},
+      {n:'Docker',y:6,d:'Compose, CI builds, Kubernetes basics',c:'#3c79a6'},
+      {n:'Monitoring',y:4,d:'Prometheus, Grafana, Loki',c:'#c27a34'}
+    ],
+    contact:"Looking for someone for your backend, an API or a rebuild that can't wait any longer? Write to me, I reply within 24 hours.",
+    avail:'From January 2027, remote or in Cologne.'
+  }
+};
+
+// ===================== Oberfläche (Übersetzungen) =====================
+const I18N={
+  de:{
+    title:'Felix Zorn · Backend Developer',
+    descr:'Dein Name, Backend Developer für Go und PHP. Ein Portfolio als Inselreise.',
+    langLabel:'Sprache',
+    classic:'Klassische Ansicht', classicBack:'Zurück aufs Wasser', close:'Schließen',
+    todLocal:'Ortszeit', todChange:'Tageszeit ändern', todBack:'Zurück zur Ortszeit', todYour:'Deine Ortszeit', todPreview:'Vorschau',
+    ph_night:'Nacht', ph_dawn:'Morgendämmerung', ph_morning:'Vormittag', ph_noon:'Mittag', ph_afternoon:'Nachmittag', ph_sunset:'Abendrot', ph_evening:'Abend',
+    chartLabel:'Seekarte', chartAria:'Seekarte: Klick auf eine Insel, um hinzufahren',
+    navAria:'Inseln', canvasAria:'Inselwelt: Ein Boot fährt zu fünf Inseln, jede Insel ist ein Teil des Portfolios.',
+    leave:'⚓ Ablegen',
+    prevIsl:l=>`← ${l}`, nextIsl:l=>`Nächste Insel: ${l} →`,
+    signAria:(p,l)=>`Zur ${p} fahren: ${l}`,
+    enterLoading:'Einen Moment …', enterReady:'Leinen los', noGl:'3D nicht verfügbar',
+    introClassic:'lieber klassisch lesen',
+    hintTouch:'Tippe aufs Wasser, um hinzufahren, oder auf ein Schild',
+    hintKeys:'Steuern mit WASD oder Pfeiltasten · Klick aufs Wasser oder auf ein Schild',
+    dock:p=>`⚓ An Land gehen: ${p}`, kbdKey:'<kbd>Leertaste</kbd>',
+    toastCourse:p=>`Kurs auf ${p}`,
+    gull:'Kreisch! Die Möwe will deine Pommes.',
+    boat:'Das ist die MS Uptime. 99,9 % seetüchtig.',
+    copy:'Kopieren', copied:'Kopiert', selected:'Markiert',
+    kickAbout:'Willkommen im Heimathafen',
+    kickProj:'vom Leuchtturm aus', h2Proj:'Projekte, die leuchten', leadProj:'Jedes Projekt bekommt eine Kennzahl. Daran messe ich, ob ein Backend gut ist.', codeLink:'Code ansehen ↗',
+    kickExp:'eine Insel pro Etappe', h2Exp:'Meine Route bisher', nextStop:'nächste Insel', yourTeam:'dein Team?',
+    kickSkills:'aus der Werft', h2Skills:'Werkzeuge, die ich täglich nutze', leadSkills:'Ein Kästchen steht für ein Jahr Praxis.',
+    years:n=>`${n} J.`, yearsAria:n=>`${n} Jahre`,
+    kickContact:'Flaschenpost gefunden', h2Contact:'Lass uns reden.',
+    isl_about:{label:'Über mich',place:'Heimathafen'},
+    isl_projects:{label:'Projekte',place:'Leuchtturm-Insel'},
+    isl_exp:{label:'Erfahrung',place:'Inseln der Jahre'},
+    isl_skills:{label:'Skills',place:'Werft'},
+    isl_contact:{label:'Kontakt',place:'Funkturm-Insel'}
+  },
+  en:{
+    title:'Felix Zorn · Backend Developer',
+    descr:'Felix Zorn, backend developer for Go and PHP. A portfolio as an island journey.',
+    langLabel:'Language',
+    classic:'Classic view', classicBack:'Back to the water', close:'Close',
+    todLocal:'Local time', todChange:'Change time of day', todBack:'Back to local time', todYour:'Your local time', todPreview:'Preview',
+    ph_night:'Night', ph_dawn:'Dawn', ph_morning:'Morning', ph_noon:'Midday', ph_afternoon:'Afternoon', ph_sunset:'Sunset', ph_evening:'Evening',
+    chartLabel:'Sea chart', chartAria:'Sea chart: click an island to sail there',
+    navAria:'Islands', canvasAria:'Island world: a boat sails to five islands, each island is part of the portfolio.',
+    leave:'⚓ Cast off',
+    prevIsl:l=>`← ${l}`, nextIsl:l=>`Next island: ${l} →`,
+    signAria:(p,l)=>`Sail to ${p}: ${l}`,
+    enterLoading:'One moment …', enterReady:'Cast off', noGl:'3D not available',
+    introClassic:'read it classic instead',
+    hintTouch:'Tap the water to sail there, or tap a sign',
+    hintKeys:'Steer with WASD or arrow keys · click the water or a sign',
+    dock:p=>`⚓ Go ashore: ${p}`, kbdKey:'<kbd>Space</kbd>',
+    toastCourse:p=>`Heading for ${p}`,
+    gull:'Squawk! The gull wants your fries.',
+    boat:'This is the MS Uptime. 99.9% seaworthy.',
+    copy:'Copy', copied:'Copied', selected:'Selected',
+    kickAbout:'Welcome to the home port',
+    kickProj:'from the lighthouse', h2Proj:'Projects that shine', leadProj:'Every project gets a key figure. That is how I measure whether a backend is good.', codeLink:'View code ↗',
+    kickExp:'one island per stage', h2Exp:'My route so far', nextStop:'next island', yourTeam:'your team?',
+    kickSkills:'from the shipyard', h2Skills:'Tools I use every day', leadSkills:'One box stands for one year of practice.',
+    years:n=>`${n} yrs`, yearsAria:n=>`${n} years`,
+    kickContact:'Message in a bottle found', h2Contact:"Let's talk.",
+    isl_about:{label:'About me',place:'Home port'},
+    isl_projects:{label:'Projects',place:'Lighthouse island'},
+    isl_exp:{label:'Experience',place:'Islands of the years'},
+    isl_skills:{label:'Skills',place:'Shipyard'},
+    isl_contact:{label:'Contact',place:'Radio tower island'}
+  }
+};
+
+// ===================== Sprache =====================
+let LANG=(document.cookie.match(/(?:^|;\s*)lang=(de|en)/)||[])[1]||'en';
+const tr=(k,...a)=>{ const v=I18N[LANG][k]??I18N.en[k]??k; return typeof v==='function'?v(...a):v; };
+const C=()=>CONTENT[LANG];
+const isl=id=>tr('isl_'+id);
+const LANG_HOOKS=[];
+let enterState='loading';
+function applyEnter(){ $('#enterBtn').textContent=tr({loading:'enterLoading',ready:'enterReady',nogl:'noGl'}[enterState]); }
+function applyStatic(){
+  document.documentElement.lang=LANG;
+  document.title=tr('title');
+  document.querySelector('meta[name="description"]').content=tr('descr');
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=tr(el.dataset.i18n));
+  document.querySelectorAll('[data-i18n-aria]').forEach(el=>el.setAttribute('aria-label',tr(el.dataset.i18nAria)));
+  document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===LANG)));
+  $('#bName').textContent=$('#iName').textContent=C().name;
+  $('#bRole').textContent=C().role;
+  $('#introKicker').textContent=C().intro.kicker; $('#introText').textContent=C().intro.text;
+  applyEnter();
+}
+function setLang(l){
+  if(l===LANG||!I18N[l]) return;
+  LANG=l; document.cookie=`lang=${l};path=/;max-age=31536000;SameSite=Lax`;
+  applyStatic(); LANG_HOOKS.forEach(f=>f());
+}
+function promptHTML(id){ return tr('dock',isl(id).place)+(touch?'':' '+tr('kbdKey')); }
+function hintText(){ return tr(touch||innerWidth<=760?'hintTouch':'hintKeys'); }
+// ================================================================
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const touch=matchMedia('(pointer: coarse)').matches;
+applyStatic();
+
+const ORDER=['about','projects','exp','skills','contact'];
+const IS={
+  about:   {x:0,   z:0,   r:5.2, pd:0,          seed:1, signY:4.6},
+  projects:{x:21,  z:-12, r:4.6, pd:-Math.PI*0.62, seed:2, signY:7.4},
+  exp:     {x:2,   z:-27, r:2.9, pd:0.05,       seed:3, signY:4.4, cx:-3.5, cz:-26},
+  skills:  {x:-21, z:-9,  r:4.8, pd:Math.PI*0.62,  seed:4, signY:6.2},
+  contact: {x:19,  z:13,  r:4.2, pd:-Math.PI*0.42, seed:5, signY:7.2}
+};
+const EXTRA_ISLETS=[{x:-12,z:-24,r:2.4,year:2,seed:7},{x:-5,z:-29.5,r:2.4,year:1,seed:8},{x:8.5,z:-22,r:1.6,year:-1,seed:9}];
+
+function html(id){
+  const c=C();
+  if(id==='about') return `<span class="kicker">${esc(tr('kickAbout'))}</span><h2>${esc(c.name)}</h2><p class="lead">${esc(c.role)}</p>${c.about.map(x=>`<p>${esc(x)}</p>`).join('')}<dl class="facts">${c.facts.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+  if(id==='projects') return `<span class="kicker">${esc(tr('kickProj'))}</span><h2>${esc(tr('h2Proj'))}</h2><p class="muted">${esc(tr('leadProj'))}</p>${c.projects.map(p=>`<article class="proj"><h3>${esc(p.t)}</h3><div class="metric">${esc(p.m)}<small>${esc(p.mi)}</small></div><p>${esc(p.d)}</p><div class="chips">${p.s.map(s=>`<span>${esc(s)}</span>`).join('')}</div>${p.u?`<a class="lnk" href="${esc(p.u)}" target="_blank" rel="noopener noreferrer">${esc(tr('codeLink'))}</a>`:''}</article>`).join('')}`;
+  if(id==='exp') return `<span class="kicker">${esc(tr('kickExp'))}</span><h2>${esc(tr('h2Exp'))}</h2><ol class="tl">${c.exp.map(e=>`<li><span class="when">${esc(e.y)}</span><h3>${esc(e.r)}</h3><span class="muted">${esc(e.c)}</span><ul>${e.p.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></li>`).join('')}<li class="next"><span class="when">${esc(tr('nextStop'))}</span><span class="hand">${esc(tr('yourTeam'))}</span></li></ol>`;
+  if(id==='skills') return `<span class="kicker">${esc(tr('kickSkills'))}</span><h2>${esc(tr('h2Skills'))}</h2><p class="muted">${esc(tr('leadSkills'))}</p><div>${c.skills.map(s=>`<div class="skill"><strong>${esc(s.n)}</strong><span class="meter" aria-label="${esc(tr('yearsAria',s.y))}">${Array.from({length:10},(_,i)=>`<i class="${i<s.y?'on':''}"></i>`).join('')}<span>${esc(tr('years',s.y))}</span></span><span class="d">${esc(s.d)}</span></div>`).join('')}</div>`;
+  if(id==='contact') return `<span class="kicker">${esc(tr('kickContact'))}</span><h2>${esc(tr('h2Contact'))}</h2><p>${esc(c.contact)}</p><div class="mail"><code id="mailAddr">${esc(SHARED.email)}</code><button class="btn primary" type="button" data-copy="mailAddr">${esc(tr('copy'))}</button></div><div class="row">${SHARED.links.map(([n,_,u])=>`<a class="btn" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(n)} ↗</a>`).join('')}</div><p class="muted">${esc(c.avail)}</p>`;
+  return '';
+}
+
+// ---------- UI ----------
+const nav=$('#nav'), signsEl=$('#signs'), panel=$('#panel'), pBody=$('#pBody'), navBtn={};
+ORDER.forEach(id=>{
+  const b=document.createElement('button'); b.type='button'; b.dataset.go=id; nav.append(b); navBtn[id]=b;
+  const s=document.createElement('button'); s.type='button'; s.className='sign'; s.dataset.go=id;
+  signsEl.append(s); IS[id].el=s;
+});
+function labelIslands(){
+  ORDER.forEach(id=>{ const i=isl(id), s=IS[id].el;
+    navBtn[id].textContent=i.label;
+    s.innerHTML=`<b>${esc(i.label)}<small>${esc(i.place)}</small></b><i></i>`; s.setAttribute('aria-label',tr('signAria',i.place,i.label)); });
+}
+labelIslands();
+let toastT;
+function toast(text){ const el=$('#toast'); el.textContent=text; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true,3200); }
+function copy(el,btn){
+  const sel=()=>{ const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent=tr('selected'); };
+  try{ navigator.clipboard.writeText(el.textContent).then(()=>{ btn.textContent=tr('copied'); setTimeout(()=>btn.textContent=tr('copy'),1800); },sel); }catch(_){ sel(); }
+}
+function renderClassic(){
+  $('#classicBody').innerHTML=`<div class="classic-top"><strong>${esc(C().name)}</strong><button class="btn" type="button" id="closeClassic">${tr(gl?'classicBack':'close')}</button></div>`+ORDER.map(id=>`<section>${html(id)}</section>`).join('');
+  $('#closeClassic').addEventListener('click',()=>classic(false));
+}
+function classic(open){
+  const c=$('#classic'); if(!open){ c.hidden=true; return; }
+  renderClassic(); c.hidden=false; c.scrollTop=0; $('#closeClassic').focus();
+}
+LANG_HOOKS.push(labelIslands,()=>{ const c=$('#classic'); if(!c.hidden){ const y=c.scrollTop; renderClassic(); c.scrollTop=y; } });
+$('#classicBtn').addEventListener('click',()=>classic(true));
+$('#introClassic').addEventListener('click',()=>classic(true));
+document.querySelectorAll('[data-lang]').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.lang)));
+
+let gl=null;
+try{ if(window.THREE) gl=new THREE.WebGLRenderer({canvas:$('#gl'),antialias:true}); }catch(e){ gl=null; }
+if(!gl){ enterState='noGl'; applyEnter(); setTimeout(()=>classic(true),400); }
+else Promise.race([
+  Promise.all(['800 64px "Gabarito"','700 40px "JetBrains Mono"','700 60px "Kalam"'].map(f=>document.fonts.load(f).catch(()=>{}))),
+  new Promise(r=>setTimeout(r,2500))
+]).then(()=>start(gl));
+
+function start(renderer){
+  const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.75));
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputEncoding=THREE.sRGBEncoding; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.0;
+  const scene=new THREE.Scene(); scene.fog=new THREE.Fog(0x9fd6ef,95,230); scene.background=new THREE.Color(0x9fd6ef);
+  const camera=new THREE.PerspectiveCamera(36,1,0.1,400);
+  const maxAniso=renderer.capabilities.getMaxAnisotropy();
+
+  // ---------- helpers ----------
+  function canvasTex(w,h,draw){ const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d'); draw(g,w,h); const t=new THREE.CanvasTexture(c); t.encoding=THREE.sRGBEncoding; t.anisotropy=maxAniso; return t; }
+  const mat=(color,o={})=>new THREE.MeshStandardMaterial(Object.assign({color,roughness:.8,metalness:0},o));
+  const flat=(color,o={})=>mat(color,Object.assign({flatShading:true},o));
+  function add(geo,m,x=0,y=0,z=0,parent=scene,shadow=true){ const o=new THREE.Mesh(geo,m); o.position.set(x,y,z); o.castShadow=shadow; o.receiveShadow=true; parent.add(o); return o; }
+  function rrShape(w,h,r){ const s=new THREE.Shape(); r=Math.min(r,w/2,h/2); s.moveTo(-w/2+r,-h/2); s.lineTo(w/2-r,-h/2); s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r); s.lineTo(w/2,h/2-r); s.quadraticCurveTo(w/2,h/2,w/2-r,h/2); s.lineTo(-w/2+r,h/2); s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r); s.lineTo(-w/2,-h/2+r); s.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2); return s; }
+  function rboxGeo(w,h,d,r){ r=Math.max(0.004,Math.min(r,w/2-0.001,h/2-0.001,d/2-0.001)); const g=new THREE.ExtrudeGeometry(rrShape(w-2*r,h-2*r,r*0.6),{depth:Math.max(0.001,d-2*r),bevelEnabled:true,bevelThickness:r,bevelSize:r,bevelSegments:2,curveSegments:3}); g.center(); return g; }
+  const rbox=(w,h,d,r,m,x,y,z,p)=>add(rboxGeo(w,h,d,r),m,x,y,z,p);
+  const box=(w,h,d,m,x,y,z,p)=>add(new THREE.BoxGeometry(w,h,d),m,x,y,z,p);
+  const cyl=(rt,rb,h,m,x,y,z,p,seg=12)=>add(new THREE.CylinderGeometry(rt,rb,h,seg),m,x,y,z,p);
+  const sph=(r,m,x,y,z,p,ws=16,hs=12)=>add(new THREE.SphereGeometry(r,ws,hs),m,x,y,z,p);
+  function grp(x=0,y=0,z=0,ry=0,p=scene){ const g=new THREE.Group(); g.position.set(x,y,z); g.rotation.y=ry; p.add(g); return g; }
+  function roofGeo(w,h,d){ const s=new THREE.Shape(); s.moveTo(-w/2,0); s.lineTo(w/2,0); s.lineTo(0,h); s.lineTo(-w/2,0); const g=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false}); g.translate(0,0,-d/2); return g; }
+  function blobCyl(rt,rb,h,seg,seed,jit=.18){ const g=new THREE.CylinderGeometry(rt,rb,h,seg,2); const p=g.attributes.position;
+    for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i), r=Math.hypot(x,z); if(r<1e-4) continue; const a=Math.atan2(z,x);
+      const n=1+jit*(Math.sin(a*3+seed)*.5+Math.sin(a*5+seed*2.3)*.3+Math.sin(a*7+seed*.7)*.2); p.setX(i,x*n); p.setZ(i,z*n); }
+    g.computeVertexNormals(); return g; }
+  const hot=[]; function tag(obj,id){ obj.traverse(o=>{ if(o.isMesh){ o.userData.hot=id; hot.push(o); } }); }
+
+  // ---------- materials ----------
+  const M={
+    rock:flat(0x6f7a78), sand:flat(0xe0b96e), grass:flat(0x6aa457), grass2:flat(0x5f9a58), pine:flat(0x2f6b4f), bush:flat(0x4f8f55),
+    trunk:flat(0x6b4a33), wood:mat(0x8d5d37,{roughness:.9}), woodDark:mat(0x5c3a20,{roughness:.9}), white:mat(0xf3eee4), red:mat(0xd2493d),
+    cream:mat(0xf0e4cc), dark:mat(0x2b2f36), roofRed:flat(0xb8483a), roofBlue:flat(0x3d6d8a), roofGreen:flat(0x4f7d5a), stone:flat(0x9aa3a6)
+  };
+  const winM=new THREE.MeshStandardMaterial({color:0x3b4a55,emissive:0xffc574,emissiveIntensity:0,roughness:.4});
+  const glowM=new THREE.MeshBasicMaterial({color:0xffe6a8});
+
+  // ---------- textures ----------
+  const labelTex=(text,sub,bg,fg)=>canvasTex(512,256,(g,w,h)=>{ g.fillStyle=bg; g.fillRect(0,0,w,h); g.fillStyle=fg; g.textAlign='center'; g.textBaseline='middle';
+    g.font=`800 ${text.length>8?78:96}px "Gabarito", sans-serif`; g.fillText(text,w/2,sub?h*.42:h/2); if(sub){ g.font='700 44px "Kalam", cursive'; g.globalAlpha=.85; g.fillText(sub,w/2,h*.78); } });
+  const crateTex=s=>canvasTex(256,256,(g,w,h)=>{ g.fillStyle='#b5874f'; g.fillRect(0,0,w,h); g.strokeStyle='#7a5530'; g.lineWidth=14; g.strokeRect(7,7,w-14,h-14);
+    g.beginPath(); g.moveTo(14,14); g.lineTo(w-14,h-14); g.stroke(); g.fillStyle='#f6ecd8'; g.fillRect(28,h/2-40,w-56,80);
+    g.fillStyle=s.c; g.textAlign='center'; g.textBaseline='middle'; g.font=`800 ${s.n.length>7?34:52}px "Gabarito", sans-serif`; g.fillText(s.n,w/2,h/2+2); });
+  const flagTex=(y,r)=>canvasTex(512,320,(g,w,h)=>{ g.fillStyle=r?'#f6ecd8':'#ff8a3d'; g.fillRect(0,0,w,h); g.fillStyle=r?'#c0392b':'#2a1505'; g.textAlign='center'; g.textBaseline='middle';
+    g.font='900 120px "Gabarito", sans-serif'; g.fillText(y,w/2,h*.42); g.font='700 46px "Kalam", cursive'; g.fillStyle='#2a1505'; g.fillText(r||tr('yourTeam'),w/2,h*.8); });
+
+  // ---------- water ----------
+  const WSEG=110, WSIZE=240;
+  const wGeo=new THREE.PlaneGeometry(WSIZE,WSIZE,WSEG,WSEG); wGeo.rotateX(-Math.PI/2);
+  const wPos=wGeo.attributes.position, wBase=Float32Array.from(wPos.array);
+  const waterM=new THREE.MeshStandardMaterial({color:0x2a9bb0,flatShading:true,roughness:.35,metalness:.05});
+  const water=add(wGeo,waterM,0,0,0,scene,false);
+  const waveY=(x,z,t)=>Math.sin(x*.18+t*1.1)*.13+Math.cos(z*.22+t*.9)*.11+Math.sin((x+z)*.09+t*.6)*.08;
+  function updateWater(t){ for(let i=0;i<wPos.count;i++){ const x=wBase[i*3], z=wBase[i*3+2]; wPos.array[i*3+1]=waveY(x,z,t)-0.05; } wPos.needsUpdate=true; }
+
+  // ---------- islands ----------
+  const TOP=0.85, colliders=[], foams=[];
+  function islandBase(r,seed,parent){
+    add(blobCyl(r*1.02,r*1.45,2.6,14,seed,.16),M.rock,0,-1.2,0,parent);
+    add(blobCyl(r*1.0,r*1.08,0.62,18,seed+1,.15),M.sand,0,0.24,0,parent);
+    add(blobCyl(r*0.78,r*0.92,0.46,18,seed+2,.2),M.grass,0,0.62,0,parent);
+    const f=add(new THREE.RingGeometry(r*1.06,r*1.5,48),new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:.35,depthWrite:false}),0,0.06,0,parent,false); f.rotation.x=-Math.PI/2; f.userData.phase=seed; foams.push(f);
+  }
+  const pine=(x,z,s,p)=>{ cyl(.06*s,.09*s,.4*s,M.trunk,x,TOP+.2*s,z,p,6); add(new THREE.ConeGeometry(.5*s,.9*s,7),M.pine,x,TOP+.75*s,z,p); add(new THREE.ConeGeometry(.36*s,.7*s,7),M.pine,x,TOP+1.15*s,z,p); };
+  const bush=(x,z,s,p)=>add(new THREE.IcosahedronGeometry(.38*s,0),M.bush,x,TOP+.22*s,z,p);
+  const rock=(x,y,z,s,p)=>{ const r=add(new THREE.DodecahedronGeometry(.32*s,0),M.stone,x,y,z,p); r.rotation.set(s,s*2,s*3); };
+  function pier(r,p){ const z0=r*.72, z1=r+2.6, L=z1-z0; box(1.15,.12,L,M.wood,0,.5,z0+L/2,p);
+    for(let z=z0+.5;z<z1;z+=1.1){ [-.52,.52].forEach(x=>cyl(.07,.07,1.3,M.woodDark,x,-.05,z,p,6)); }
+    for(let z=z0+.15;z<z1;z+=.28) box(1.17,.02,.04,M.woodDark,0,.565,z,p); }
+
+  const islands={};
+  ORDER.forEach(id=>{ const c=IS[id], g=grp(c.x,0,c.z,c.pd); islandBase(c.r,c.seed,g); pier(c.r,g); islands[id]=g; colliders.push({x:c.x,z:c.z,r:c.r,id}); });
+  EXTRA_ISLETS.forEach(e=>{ const g=grp(e.x,0,e.z,0); islandBase(e.r,e.seed,g); colliders.push({x:e.x,z:e.z,r:e.r,id:'exp'}); e.g=g; tag(g,'exp'); });
+
+  // home (about)
+  { const g=islands.about;
+    const house=grp(0,TOP,-1.4,0,g);
+    rbox(2.4,1.5,2.0,.06,M.cream,0,.75,0,house);
+    add(roofGeo(2.9,1.1,2.4),M.roofRed,0,1.48,0,house).rotation.y=Math.PI/2;
+    rbox(.5,.9,.06,.03,M.woodDark,0,.45,1.01,house);
+    [-.75,.75].forEach(x=>{ rbox(.5,.45,.06,.03,winM,x,.85,1.01,house); box(.56,.05,.1,M.white,x,.6,1.03,house); });
+    rbox(.5,.45,.06,.03,winM,1.21,.85,0,house).rotation.y=Math.PI/2;
+    box(.32,.8,.32,M.stone,.7,1.9,-.5,house);
+    const mb=grp(1.3,TOP,1.2,0,g); cyl(.04,.04,.8,M.woodDark,0,.4,0,mb,6); rbox(.36,.26,.24,.06,M.red,0,.86,0,mb);
+    pine(-2.6,-1.6,1.1,g); pine(-2.1,-2.8,.9,g); pine(2.7,-1.8,1.2,g); bush(-1.8,1.4,1,g); bush(2.2,.8,.8,g); rock(3.3,.5,1.8,1.1,g);
+    g.userData.chimney=V(.7,TOP+2.35,-1.9);
+    tag(g,'about'); }
+  // lighthouse (projects)
+  let beam;
+  { const g=islands.projects, lh=grp(-1.1,TOP,-1.2,0,g);
+    const seg=[[.78,.7,.8,M.white],[.7,.62,.8,M.red],[.62,.55,.8,M.white],[.55,.48,.8,M.red]]; let y=0;
+    seg.forEach(([rb,rt,h,m])=>{ cyl(rt,rb,h,m,0,y+h/2,0,lh,16); y+=h; });
+    cyl(.72,.72,.1,M.dark,0,y+.05,0,lh,16); y+=.1;
+    const lamp=cyl(.4,.4,.6,new THREE.MeshStandardMaterial({color:0xfff0c0,emissive:0xffd27a,emissiveIntensity:.2,roughness:.2}),0,y+.3,0,lh,12); lh.userData.lamp=lamp;
+    add(new THREE.ConeGeometry(.55,.55,12),M.red,0,y+.88,0,lh); y+=.3;
+    beam=grp(0,y,0,0,lh); const bg=new THREE.ConeGeometry(1.5,18,20,1,true); bg.translate(0,-9,0); bg.rotateZ(Math.PI/2);
+    const bm=new THREE.MeshBasicMaterial({color:0xfff2b0,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false});
+    add(bg,bm,0,0,0,beam,false).receiveShadow=false; beam.userData.m=bm; beam.userData.lamp=lamp;
+    const huts=[[1.7,-1.5,M.roofBlue],[2.3,.6,M.roofGreen],[-2.4,1.0,M.roofRed]];
+    huts.forEach(([x,z,rm],i)=>{ const h=grp(x,TOP,z,-Math.atan2(x,z)+Math.PI,g); rbox(1.0,.8,.9,.05,M.cream,0,.4,0,h); add(roofGeo(1.25,.6,1.1),rm,0,.8,0,h).rotation.y=Math.PI/2; rbox(.3,.28,.05,.02,winM,0,.45,.46,h); });
+    bush(.2,2.0,.8,g); rock(3.2,.5,-1.2,1,g); pine(-.2,-3.0,.9,g);
+    tag(g,'projects'); }
+  // shipyard (skills)
+  { const g=islands.skills;
+    const shed=grp(-1.2,TOP,-1.6,0,g); rbox(2.6,1.7,2.0,.05,flat(0x9b4a3c),0,.85,0,shed); add(roofGeo(3.0,.9,2.4),M.dark,0,1.7,0,shed).rotation.y=Math.PI/2; box(1.4,1.2,.05,M.dark,0,.62,1.0,shed);
+    const cr=grp(1.8,TOP,-1.4,-.6,g); box(.5,.2,.5,M.dark,0,.1,0,cr); box(.18,3.6,.18,flat(0xe0a83a),0,2,0,cr); box(2.8,.16,.16,flat(0xe0a83a),.9,3.7,0,cr); box(.6,.4,.4,M.dark,-.6,3.6,0,cr);
+    cyl(.012,.012,1.6,M.dark,2.1,2.85,0,cr,4); box(.16,.12,.16,M.dark,2.1,2.0,0,cr);
+    const cratePos=[[.6,.6],[1.25,.6],[.92,1.25],[-.5,1.4],[.15,1.5],[-.2,.9]];
+    C().skills.forEach((s,i)=>{ const [x,z]=cratePos[i%cratePos.length], stacked=i===2; const m=new THREE.MeshStandardMaterial({map:crateTex(s),roughness:.8});
+      const c=add(new THREE.BoxGeometry(.6,.6,.6),m,x,TOP+.3+(stacked?.6:0),z+(stacked?-.32:0),g); c.rotation.y=(i*.37)%0.6-.3; });
+    pine(-2.8,.6,1,g); pine(2.6,1.2,.9,g); rock(-3.4,.5,-.6,1.2,g); bush(0,-3,1,g);
+    tag(g,'skills'); }
+  // years (exp)
+  function flag(g,x,z,mk,h=2.4){ cyl(.04,.04,h,M.white,x,TOP+h/2,z,g,6); const f=add(new THREE.PlaneGeometry(1.4,.88),new THREE.MeshStandardMaterial({map:mk(),side:THREE.DoubleSide,roughness:.8}),x+.72,TOP+h-.5,z,g); f.userData.flag=true; f.userData.mk=mk; return f; }
+  const expFlag=i=>{ const x=C().exp[i]; return flagTex(x.y.split(' ')[0],x.r.split(' ')[0]); };
+  const flags=[];
+  { const g=islands.exp; flags.push(flag(g,-.6,-.6,()=>expFlag(0))); bush(1.2,-.9,.8,g); pine(-1.6,-1.0,.8,g); tag(g,'exp'); }
+  EXTRA_ISLETS.forEach(e=>{ if(e.year>=0){ flags.push(flag(e.g,-.4,-.3,()=>expFlag(e.year))); bush(.9,.6,.7,e.g); }
+    else { flags.push(flag(e.g,-.3,0,()=>flagTex('?',''),1.9)); } });
+  // radio (contact)
+  let radioLed, bottle;
+  { const g=islands.contact;
+    const mast=add(new THREE.CylinderGeometry(.06,.6,6,4,6,true),new THREE.MeshStandardMaterial({color:0xd8dde0,wireframe:true}),-1.2,TOP+3,-1.2,g,false);
+    radioLed=sph(.12,new THREE.MeshBasicMaterial({color:0xff4a3a}),-1.2,TOP+6.05,-1.2,g,10,8);
+    const hut=grp(1.2,TOP,-1.4,-.4,g); rbox(1.5,1.1,1.3,.05,flat(0x5b8aa6),0,.55,0,hut); add(roofGeo(1.8,.6,1.6),M.dark,0,1.1,0,hut).rotation.y=Math.PI/2; rbox(.35,.3,.05,.02,winM,0,.6,.66,hut); cyl(.02,.02,1.1,M.dark,.4,1.9,0,hut,4);
+    bottle=grp(1.6,.6,2.9,.7,g); add(new THREE.CylinderGeometry(.12,.12,.42,12),new THREE.MeshStandardMaterial({color:0x5fae8a,transparent:true,opacity:.75,roughness:.1}),0,0,0,bottle).rotation.z=Math.PI/2;
+    add(new THREE.CylinderGeometry(.05,.08,.18,10),new THREE.MeshStandardMaterial({color:0x5fae8a,transparent:true,opacity:.75}),.29,0,0,bottle).rotation.z=Math.PI/2; cyl(.04,.04,.06,M.trunk,.4,0,0,bottle,6).rotation.z=Math.PI/2;
+    pine(2.4,.2,1,g); bush(-2.2,1.0,.9,g); rock(-3,.5,0,1,g);
+    tag(g,'contact'); }
+
+  // ---------- boat ----------
+  const boat=grp(0,0,0,0);
+  { const s=new THREE.Shape(); s.moveTo(-.62,-1.25); s.lineTo(.62,-1.25); s.quadraticCurveTo(.72,.2,.0,1.45); s.quadraticCurveTo(-.72,.2,-.62,-1.25);
+    const hull=new THREE.ExtrudeGeometry(s,{depth:.55,bevelEnabled:true,bevelThickness:.06,bevelSize:.06,bevelSegments:2}); hull.rotateX(Math.PI/2); hull.translate(0,.4,0);
+    add(hull,M.white,0,0,0,boat);
+    const stripe=new THREE.ExtrudeGeometry(s,{depth:.1,bevelEnabled:true,bevelThickness:.02,bevelSize:.08,bevelSegments:1}); stripe.rotateX(Math.PI/2); stripe.translate(0,.22,0); add(stripe,M.red,0,0,0,boat);
+    const ds=new THREE.Shape(); ds.moveTo(-.52,-1.15); ds.lineTo(.52,-1.15); ds.quadraticCurveTo(.6,.2,0,1.3); ds.quadraticCurveTo(-.6,.2,-.52,-1.15);
+    const deck=new THREE.ShapeGeometry(ds); deck.rotateX(-Math.PI/2); add(deck,M.wood,0,.47,0,boat);
+    rbox(.8,.55,.7,.06,M.cream,0,.75,.15,boat); box(.92,.06,.82,M.roofBlue,0,1.05,.15,boat);
+    [-.41,.41].forEach(x=>rbox(.05,.2,.4,.02,winM,x,.82,.15,boat)); rbox(.5,.2,.05,.02,winM,0,.82,.51,boat);
+    cyl(.02,.02,.9,M.dark,0,1.5,.15,boat,4); add(new THREE.PlaneGeometry(.35,.22),new THREE.MeshStandardMaterial({color:0xff8a3d,side:THREE.DoubleSide}),.18,1.82,.15,boat).rotation.y=Math.PI/2;
+    boat.userData.lantern=sph(.06,glowM,0,1.12,.55,boat,8,6);
+  }
+  tag(boat,'boat');
+  // ---------- figure (you) ----------
+  const me=grp(0,0,0,0);
+  const skinM=mat(SHARED.me.skin), hairM=mat(SHARED.me.hair), topM=mat(SHARED.me.top), pantsM=mat(SHARED.me.pants), shoeM=mat(0x222222);
+  const legL=grp(-.07,.24,0,0,me), legR=grp(.07,.24,0,0,me);
+  [legL,legR].forEach(l=>{ cyl(.05,.05,.22,pantsM,0,-.11,0,l,8); rbox(.09,.05,.14,.02,shoeM,0,-.22,.02,l); });
+  rbox(.26,.3,.17,.07,topM,0,.4,0,me);
+  const armL=grp(-.16,.52,0,0,me), armR=grp(.16,.52,0,0,me);
+  [armL,armR].forEach(a=>{ cyl(.035,.035,.24,topM,0,-.12,0,a,8); sph(.04,skinM,0,-.25,0,a,8,6); });
+  const head=sph(.15,skinM,0,.7,0,me); const hair=sph(.155,hairM,0,.74,-.02,me); hair.scale.set(1,.75,1.02);
+  sph(.018,mat(0x1a1a1a),-.05,.71,.135,me,6,4); sph(.018,mat(0x1a1a1a),.05,.71,.135,me,6,4);
+  me.scale.setScalar(1.25); boat.add(me); me.position.set(0,.47,-.75);
+
+  // ---------- life ----------
+  const gulls=[]; for(let i=0;i<4;i++){ const g=grp(); const b=sph(.12,M.white,0,0,0,g,8,6); b.scale.set(1,.8,1.8);
+    const wl=grp(-.08,0,0,0,g), wr=grp(.08,0,0,0,g); box(.5,.02,.18,M.white,-.25,0,0,wl).castShadow=false; box(.5,.02,.18,M.white,.25,0,0,wr).castShadow=false;
+    g.userData={wl,wr,r:10+i*5,sp:.12+i*.03,ph:i*1.7,h:6+i*.8,cx:i%2?14:-6,cz:i%2?-6:-10}; gulls.push(g); tag(g,'gull'); }
+  const smoke=[]; for(let i=0;i<6;i++){ const s=sph(.18,new THREE.MeshStandardMaterial({color:0xeeeeee,transparent:true,opacity:.6,roughness:1}),0,0,0,scene,8,6); s.castShadow=false; s.userData.t=i/6; smoke.push(s); }
+  const wakes=[]; const wakeGeo=new THREE.RingGeometry(.3,.5,20); wakeGeo.rotateX(-Math.PI/2);
+  for(let i=0;i<40;i++){ const w=add(wakeGeo,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false}),0,.15,0,scene,false); w.userData.life=0; wakes.push(w); }
+  let wakeIdx=0, lastWake=0;
+
+  // ---------- lights & time of day ----------
+  const hemi=new THREE.HemisphereLight(0xcfe8ff,0x3d5a44,.8); scene.add(hemi);
+  const amb=new THREE.AmbientLight(0x334466,.15); scene.add(amb);
+  const sun=new THREE.DirectionalLight(0xffffff,1.5); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+  Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30,near:1,far:140}); sun.shadow.bias=-0.0005; sun.shadow.normalBias=.03; scene.add(sun,sun.target);
+  const houseLight=new THREE.PointLight(0xffb766,0,9,2); houseLight.position.set(0,2,1); islands.about.add(houseLight);
+  const lhLight=new THREE.PointLight(0xffe2a0,0,16,2); lhLight.position.set(-1.1,4.4,-1.2); islands.projects.add(lhLight);
+  const boatLight=new THREE.PointLight(0xffc98a,0,5,2); boatLight.position.set(0,1.3,.6); boat.add(boatLight);
+  const TOD=[
+    {h:0,   sky:'#0b1631',water:'#123047',sun:'#8ea6ff',sI:.45,hemi:.32,grass:'#3f6a55',lights:1,el:40},
+    {h:5,   sky:'#1b2a4d',water:'#173b54',sun:'#9cacff',sI:.4, hemi:.35,grass:'#466f5a',lights:1,el:12},
+    {h:6.6, sky:'#f2b18a',water:'#2a6f84',sun:'#ffb87a',sI:1.15,hemi:.45,grass:'#6f9f62',lights:.4,el:8},
+    {h:9,   sky:'#8fcfea',water:'#1688a6',sun:'#fff1d6',sI:1.25,hemi:.45,grass:'#62a052',lights:0,el:42},
+    {h:13,  sky:'#93d3ee',water:'#138fae',sun:'#fffaf0',sI:1.35,hemi:.48,grass:'#66a656',lights:0,el:68},
+    {h:17,  sky:'#9fd0e4',water:'#16809e',sun:'#ffdcae',sI:1.25,hemi:.45,grass:'#62a052',lights:0,el:32},
+    {h:19.3,sky:'#ef8a6a',water:'#36698a',sun:'#ff9858',sI:1.05,hemi:.55,grass:'#6a8f5a',lights:.7,el:7},
+    {h:20.8,sky:'#2c2b58',water:'#1b3a58',sun:'#a0a8ff',sI:.5, hemi:.38,grass:'#4a6a58',lights:1,el:18},
+    {h:24,  sky:'#0b1631',water:'#123047',sun:'#8ea6ff',sI:.45,hemi:.32,grass:'#3f6a55',lights:1,el:40}
+  ];
+  const cA=new THREE.Color(), cB=new THREE.Color();
+  const lerpHex=(a,b,k,out)=>out.copy(cA.set(a)).lerp(cB.set(b),k);
+  const env={lights:0};
+  function phaseName(h){ return h<5?tr('ph_night'):h<8?tr('ph_dawn'):h<11?tr('ph_morning'):h<14?tr('ph_noon'):h<17.5?tr('ph_afternoon'):h<20.5?tr('ph_sunset'):h<22?tr('ph_evening'):tr('ph_night'); }
+  function applyTime(h){
+    let i=0; while(i<TOD.length-2&&TOD[i+1].h<=h) i++; const a=TOD[i], b=TOD[i+1], k=(h-a.h)/(b.h-a.h);
+    lerpHex(a.sky,b.sky,k,scene.background); scene.fog.color.copy(scene.background);
+    lerpHex(a.water,b.water,k,waterM.color); lerpHex(a.sun,b.sun,k,sun.color); lerpHex(a.grass,b.grass,k,M.grass.color);
+    sun.intensity=a.sI+(b.sI-a.sI)*k; hemi.intensity=a.hemi+(b.hemi-a.hemi)*k; hemi.color.copy(scene.background).lerp(cB.set('#ffffff'),.25);
+    env.lights=a.lights+(b.lights-a.lights)*k; env.el=(a.el+(b.el-a.el)*k)*Math.PI/180; env.az=(h/24)*Math.PI*2+Math.PI*.6;
+    winM.emissiveIntensity=env.lights*1.4; houseLight.intensity=env.lights*1.4; lhLight.intensity=env.lights*1.6; boatLight.intensity=env.lights*1.2;
+    glowM.color.set(env.lights>.3?0xffe6a8:0x9a8a66); beam.userData.lamp.material.emissiveIntensity=.2+env.lights*1.8;
+    renderer.toneMappingExposure=0.84+env.lights*.16;
+  }
+  const PRESETS=[null,6.8,12.5,19.4,23.2]; let presetIdx=0, curHour=0, targetHour=0;
+  const liveHour=()=>{ const d=new Date(); return d.getHours()+d.getMinutes()/60; };
+  function todLabel(){ const h=presetIdx?PRESETS[presetIdx]:liveHour(); const hh=Math.floor(h), mm=Math.round((h-hh)*60);
+    $('#todTxt').textContent=`${presetIdx?tr('todPreview'):tr('todYour')} ${String(hh).padStart(2,'0')}:${String(mm%60).padStart(2,'0')} · ${phaseName(h)}`;
+    $('#todBtn').textContent=presetIdx===PRESETS.length-1?tr('todBack'):tr('todChange'); }
+  targetHour=curHour=liveHour(); applyTime(curHour); todLabel();
+  $('#todBtn').addEventListener('click',()=>{ presetIdx=(presetIdx+1)%PRESETS.length; targetHour=presetIdx?PRESETS[presetIdx]:liveHour(); todLabel(); });
+  setInterval(()=>{ if(!presetIdx){ targetHour=liveHour(); todLabel(); } },60000);
+
+  // ---------- state ----------
+  const B={x:0,z:0,h:Math.PI,v:0};
+  let mode='intro', at=null, auto=null, dockCool=null, nearDock=null, pendingGo=null;
+  const promptEl=$('#dockPrompt');
+  function setNear(id){ if(id===nearDock) return; nearDock=id; promptEl.hidden=!id; if(id) promptEl.innerHTML=promptHTML(id); }
+  promptEl.addEventListener('click',()=>{ if(nearDock&&mode==='sail') dock(nearDock); });
+  const keys={};
+  function dockPose(id){ const c=IS[id], d=c.r+2.6+1.35; return {x:c.x+Math.sin(c.pd)*d, z:c.z+Math.cos(c.pd)*d, h:c.pd+Math.PI}; }
+  { const p=dockPose('about'); B.x=p.x; B.z=p.z; B.h=p.h; dockCool='about'; }
+  function islandWorld(id,lx,ly,lz){ return islands[id].localToWorld(V(lx,ly,lz)); }
+  function landPath(id){ const r=IS[id].r; return [islandWorld(id,0,.56,r+2.35),islandWorld(id,0,.56,r*.8),islandWorld(id,0,TOP,r*.62),islandWorld(id,.35,TOP,r*.25)]; }
+
+  // ---------- figure walking ----------
+  let walk=null;
+  function walkPath(pts,onDone){ walk={pts,i:0,onDone}; }
+  function detachMe(){ const w=new THREE.Vector3(); me.getWorldPosition(w); boat.remove(me); scene.add(me); me.position.copy(w); me.rotation.y=B.h; }
+  function attachMe(){ scene.remove(me); boat.add(me); me.position.set(0,.47,-.75); me.rotation.set(0,0,0); }
+
+  // ---------- docking ----------
+  let dockAnim=null;
+  function dock(id){
+    auto=null; mode='docking'; at=id; B.v=0; setNear(null); const p=dockPose(id);
+    dockAnim={from:{...B},to:p,t0:performance.now(),dur:reduce?1:900,then:()=>{
+      mode='ashore'; detachMe(); const path=landPath(id);
+      walkPath(path,()=>{ me.rotation.y=IS[id].pd+Math.PI; openPanel(id); });
+    }};
+    setCam('island',id); signsEl.hidden=true; $('#hint').hidden=true;
+    nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',String(b.dataset.go===id)));
+  }
+  function leave(then){
+    if(mode!=='ashore') { if(then) then(); return; }
+    closePanel(); mode='boarding'; const id=at;
+    const back=landPath(id).reverse(); const wp=new THREE.Vector3(); boat.localToWorld(wp.set(0,.47,-.75)); back.push(wp);
+    walkPath(back,()=>{ attachMe(); mode='undocking'; setCam('follow');
+      const c=IS[id], d=c.r+2.6+1.35+5.5;
+      dockAnim={from:{...B},to:{x:c.x+Math.sin(c.pd)*d,z:c.z+Math.cos(c.pd)*d,h:c.pd},t0:performance.now(),dur:reduce?1:1700,then:()=>{
+        mode='sail'; dockCool=id; at=null; B.v=1.2;
+        nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current','false')); signsEl.hidden=false;
+        if(then) then(); else if(pendingGo){ const g=pendingGo; pendingGo=null; go(g); } }}; });
+  }
+  function go(id){
+    if(mode==='intro') enter();
+    if(at===id&&mode==='ashore'){ openPanel(id); return; }
+    if(mode==='docking'||mode==='boarding'||mode==='undocking'){ pendingGo=id; return; }
+    const sail=()=>{ const p=dockPose(id); auto={x:p.x,z:p.z,dock:id}; dockCool=null; toast(tr('toastCourse',isl(id).place)); };
+    if(mode==='ashore'){ pendingGo=null; leave(sail); } else if(mode==='sail') sail();
+  }
+  let panelId=null;
+  function fillPanel(id,keepScroll){
+    const y=pBody.scrollTop; pBody.innerHTML=html(id); pBody.scrollTop=keepScroll?y:0; $('#pWhere').textContent=isl(id).place;
+    const i=ORDER.indexOf(id), pv=ORDER[(i+4)%5], nx=ORDER[(i+1)%5];
+    $('#prevBtn').textContent=tr('prevIsl',isl(pv).label); $('#prevBtn').dataset.go=pv; $('#nextBtn').textContent=tr('nextIsl',isl(nx).label); $('#nextBtn').dataset.go=nx;
+  }
+  function openPanel(id){
+    panelId=id; fillPanel(id);
+    panel.classList.add('open'); panel.setAttribute('aria-hidden','false'); document.body.classList.add('panel-open'); setOffset(true);
+    setTimeout(()=>$('#leaveBtn').focus({preventScroll:true}),80);
+  }
+  function closePanel(){ panelId=null; panel.classList.remove('open'); panel.setAttribute('aria-hidden','true'); document.body.classList.remove('panel-open'); setOffset(false); }
+  $('#leaveBtn').addEventListener('click',()=>leave());
+
+  // ---------- camera ----------
+  const camT=V(0,0,0), camP=V(0,60,70); let camMode='intro', camIsland=null;
+  let off={x:0,y:0}, offT={x:0,y:0};
+  const portrait=()=>innerWidth/innerHeight<1;
+  function setCam(m,id){ camMode=m; camIsland=id||null; }
+  function setOffset(on){ offT=!on?{x:0,y:0}:innerWidth>760?{x:Math.min(460,innerWidth)/2,y:0}:{x:0,y:innerHeight*.62/2}; }
+  function camGoal(){
+    if(camMode==='island'&&camIsland){ const c=IS[camIsland]; const cx=c.cx??c.x, cz=c.cz??c.z; const k=portrait()?1.7:1; const d=camIsland==='exp'?1.6:1;
+      return {t:V(cx,1.6,cz),p:V(cx+3*k,1.6+12*k*d,cz+15*k*d)}; }
+    if(camMode==='intro') return {t:V(0,0,-6),p:V(10,55,58)};
+    const k=portrait()?1.65:1; const lead=V(Math.sin(B.h),0,Math.cos(B.h)).multiplyScalar(Math.min(Math.abs(B.v),9)*.35*Math.sign(B.v||1));
+    return {t:V(B.x+lead.x,0,B.z+lead.z),p:V(B.x+lead.x+2*k,20*k,B.z+lead.z+19*k)};
+  }
+
+  // ---------- input ----------
+  const cv=$('#gl'), ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+  const KEYMAP={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
+  addEventListener('keydown',e=>{
+    if(e.key==='Escape'){ if(!$('#classic').hidden) classic(false); else if(mode==='ashore') leave(); return; }
+    if((e.code==='Space'||e.code==='KeyE'||e.code==='Enter')&&nearDock&&mode==='sail'&&!e.target.closest('button,a,input,textarea')){ e.preventDefault(); dock(nearDock); return; }
+    const k=KEYMAP[e.code]; if(!k||mode==='intro'||e.target.closest('input,textarea')) return;
+    if(mode==='docking'||mode==='boarding'||mode==='undocking'){ e.preventDefault(); return; }
+    if(e.target.closest('.panel')&&mode==='ashore') return;
+    e.preventDefault(); keys[k]=true; auto=null; if(mode==='ashore') leave();
+  });
+  addEventListener('keyup',e=>{ const k=KEYMAP[e.code]; if(k) keys[k]=false; });
+  addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; });
+  let down=null, hovered=null;
+  const waterPlane=new THREE.Plane(V(0,1,0),0);
+  function pick(x,y){ ndc.set(x/innerWidth*2-1,-(y/innerHeight)*2+1); ray.setFromCamera(ndc,camera); const h=ray.intersectObjects(hot,false)[0]; return h?h.object.userData.hot:null; }
+  cv.addEventListener('pointerdown',e=>{ down={x:e.clientX,y:e.clientY}; });
+  cv.addEventListener('pointermove',e=>{ if(e.pointerType!=='mouse'||mode==='intro') return; const h=pick(e.clientX,e.clientY); if(h!==hovered){ hovered=h; cv.style.cursor=h&&IS[h]?'pointer':'crosshair'; ORDER.forEach(id=>IS[id].el.classList.toggle('hot',id===h)); } });
+  cv.addEventListener('pointerup',e=>{
+    if(!down||mode==='intro') return; const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y); down=null; if(mv>10) return;
+    const h=pick(e.clientX,e.clientY);
+    if(h&&IS[h]) return go(h);
+    if(h==='gull') return toast(tr('gull'));
+    if(h==='boat') return toast(tr('boat'));
+    if(mode==='ashore') return leave();
+    if(mode!=='sail') return;
+    ray.setFromCamera(ndc,camera); const p=new THREE.Vector3(); if(ray.ray.intersectPlane(waterPlane,p)){ auto={x:p.x,z:p.z}; spawnPing(p.x,p.z); }
+  });
+  document.addEventListener('click',e=>{ const g=e.target.closest('[data-go]'); if(g){ go(g.dataset.go); return; } const c=e.target.closest('[data-copy]'); if(c) copy($('#'+c.dataset.copy),c); });
+  const ping=add(new THREE.RingGeometry(.5,.75,28).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false}),0,.2,0,scene,false); let pingT=0;
+  function spawnPing(x,z){ ping.position.set(x,.2,z); pingT=performance.now(); }
+
+  // sea chart
+  const chart=$('#chart'), cg=chart.getContext('2d'), R=46;
+  function chartXY(x,z){ return [(x/R+1)*150,(z/R+1)*150]; }
+  function drawChart(){
+    cg.clearRect(0,0,300,300); cg.fillStyle='#bfe0dc'; cg.beginPath(); cg.arc(150,150,150,0,Math.PI*2); cg.fill();
+    cg.strokeStyle='rgba(30,80,90,.18)'; cg.lineWidth=1; for(let r=40;r<150;r+=40){ cg.beginPath(); cg.arc(150,150,r,0,Math.PI*2); cg.stroke(); }
+    cg.setLineDash([6,6]); cg.strokeStyle='rgba(120,70,30,.5)'; cg.lineWidth=2; cg.beginPath(); ORDER.forEach((id,i)=>{ const p=dockPose(id), [x,y]=chartXY(p.x,p.z); i?cg.lineTo(x,y):cg.moveTo(x,y); }); cg.closePath(); cg.stroke(); cg.setLineDash([]);
+    colliders.forEach(c=>{ const [x,y]=chartXY(c.x,c.z); cg.fillStyle='#e8d09a'; cg.beginPath(); cg.arc(x,y,c.r/R*150*1.05,0,Math.PI*2); cg.fill(); cg.fillStyle='#7fb069'; cg.beginPath(); cg.arc(x,y,c.r/R*150*.75,0,Math.PI*2); cg.fill(); });
+    cg.font='700 22px "Kalam", cursive'; cg.fillStyle='#3a2a10'; cg.textAlign='center';
+    ORDER.forEach(id=>{ const c=IS[id], [x,y]=chartXY(c.cx??c.x,c.cz??c.z); cg.fillText(isl(id).label,x,y-c.r/R*150-6); });
+    const [bx,by]=chartXY(B.x,B.z); cg.save(); cg.translate(bx,by); cg.rotate(-B.h+Math.PI); cg.fillStyle='#ff8a3d'; cg.strokeStyle='#2a1505'; cg.lineWidth=3; cg.beginPath(); cg.moveTo(0,-14); cg.lineTo(9,10); cg.lineTo(-9,10); cg.closePath(); cg.fill(); cg.stroke(); cg.restore();
+  }
+  chart.addEventListener('click',e=>{
+    const r=chart.getBoundingClientRect(), x=((e.clientX-r.left)/r.width*2-1)*R, z=((e.clientY-r.top)/r.height*2-1)*R;
+    let best=null, bd=1e9; ORDER.forEach(id=>{ const c=IS[id], d=Math.hypot(x-(c.cx??c.x),z-(c.cz??c.z)); if(d<bd){ bd=d; best=id; } });
+    if(bd<9) go(best); else if(mode==='sail'){ auto={x,z}; spawnPing(x,z); } else if(mode==='ashore') leave(()=>{ auto={x,z}; });
+  });
+
+  function enter(){
+    if(mode!=='intro') return; mode='sail'; setCam('follow');
+    $('#intro').classList.add('out'); setTimeout(()=>$('#intro').hidden=true,900);
+    setTimeout(()=>{ if(mode==='sail'){ signsEl.hidden=false; const h=$('#hint'); h.textContent=hintText(); h.hidden=false; setTimeout(()=>h.hidden=true,10000); } },1400);
+  }
+  $('#enterBtn').addEventListener('click',enter);
+
+  // ---------- resize ----------
+  function resize(){ renderer.setSize(innerWidth,innerHeight,false); camera.aspect=innerWidth/innerHeight; camera.fov=portrait()?48:36; camera.updateProjectionMatrix(); if(mode==='ashore') setOffset(true); }
+  addEventListener('resize',resize); resize();
+
+  // ---------- loop ----------
+  const ACC=7, DRAG=.9, TURN=1.6, MAXV=9;
+  let last=performance.now(), lastChart=0;
+  const angDiff=(a,b)=>{ let d=b-a; while(d>Math.PI) d-=Math.PI*2; while(d<-Math.PI) d+=Math.PI*2; return d; };
+  function physics(dt,now){
+    let thr=(keys.up?1:0)-(keys.down?1:0), str=(keys.left?1:0)-(keys.right?1:0);
+    if(auto&&mode==='sail'){
+      const dx=auto.x-B.x, dz=auto.z-B.z, dist=Math.hypot(dx,dz); let want=Math.atan2(dx,dz);
+      for(const c of colliders){ if(auto.dock&&c.id===auto.dock&&c.r===IS[auto.dock].r) continue; const ox=c.x-B.x, oz=c.z-B.z, od=Math.hypot(ox,oz)-c.r*1.2;
+        if(od<5&&od<dist){ const ang=Math.atan2(ox,oz), rel=angDiff(B.h,ang); if(Math.abs(rel)<1.1){ want+= (rel>0?-1:1)*(1.2-Math.abs(rel))*1.2; } } }
+      const ad=angDiff(B.h,want); str=Math.max(-1,Math.min(1,ad*2.2)); thr=Math.abs(ad)>1.3?.25:Math.min(1,dist/5);
+      if(auto.dock&&dist<2.6){ dock(auto.dock); return; }
+      if(!auto.dock&&dist<1.2){ auto=null; }
+    }
+    B.v+=thr*ACC*dt; B.v-=B.v*DRAG*dt; B.v=Math.max(-3,Math.min(MAXV,B.v));
+    B.h+=str*TURN*dt*Math.min(1,.35+Math.abs(B.v)/5)*(B.v<-.1?-1:1);
+    B.x+=Math.sin(B.h)*B.v*dt; B.z+=Math.cos(B.h)*B.v*dt;
+    for(const c of colliders){ const dx=B.x-c.x, dz=B.z-c.z, d=Math.hypot(dx,dz), min=c.r*1.12+1.0; if(d<min){ B.x=c.x+dx/d*min; B.z=c.z+dz/d*min; B.v*=.6; } }
+    const dO=Math.hypot(B.x,B.z); if(dO>44){ B.x*=44/dO; B.z*=44/dO; B.v*=.6; }
+    if(dockCool){ const p=dockPose(dockCool); if(Math.hypot(B.x-p.x,B.z-p.z)>8) dockCool=null; }
+    let near=null; if(!auto) for(const id of ORDER){ if(id===dockCool) continue; const p=dockPose(id); if(Math.hypot(B.x-p.x,B.z-p.z)<3.6){ near=id; break; } }
+    setNear(near);
+  }
+  const tmp=V(0,0,0);
+  function frame(now){
+    requestAnimationFrame(frame); if(document.hidden){ last=now; return; }
+    const dt=Math.min(window.__dtMax||.05,(now-last)/1000); last=now; const t=now/1000;
+    if(Math.abs(angDiff(curHour/24*Math.PI*2,targetHour/24*Math.PI*2))>.002){ let d=targetHour-curHour; if(d>12) d-=24; if(d<-12) d+=24; curHour=(curHour+d*Math.min(1,dt*2.2)+24)%24; applyTime(curHour); }
+    updateWater(t);
+    if(mode==='sail') physics(dt,now); else if(nearDock) setNear(null);
+    if(dockAnim){ const k=Math.min(1,(now-dockAnim.t0)/dockAnim.dur), e=k*k*(3-2*k); B.x=dockAnim.from.x+(dockAnim.to.x-dockAnim.from.x)*e; B.z=dockAnim.from.z+(dockAnim.to.z-dockAnim.from.z)*e; B.h=dockAnim.from.h+angDiff(dockAnim.from.h,dockAnim.to.h)*e; if(k>=1){ const th=dockAnim.then; dockAnim=null; th(); } }
+    const by=waveY(B.x,B.z,t)-.05; boat.position.set(B.x,by-.12,B.z); boat.rotation.set(Math.sin(t*1.6)*.03,B.h,Math.cos(t*1.3)*.04+(mode==='sail'?-(keys.left?1:0)+(keys.right?1:0):0)*.06*Math.min(1,Math.abs(B.v)/4));
+    // walking
+    let walking=false;
+    if(walk){ const tgt=walk.pts[walk.i]; tmp.copy(tgt).sub(me.position); const d=tmp.length(), step=1.8*dt;
+      if(d<=step){ me.position.copy(tgt); walk.i++; if(walk.i>=walk.pts.length){ const f=walk.onDone; walk=null; f&&f(); } }
+      else { tmp.multiplyScalar(step/d); me.position.add(tmp); me.rotation.y=Math.atan2(tgt.x-me.position.x,tgt.z-me.position.z); walking=true; } }
+    const sw=walking?Math.sin(t*12)*.6:(mode==='sail'&&Math.abs(B.v)>.5?0:0);
+    legL.rotation.x=sw; legR.rotation.x=-sw; armL.rotation.x=-sw*.8; armR.rotation.x=sw*.8;
+    if(!walking&&mode==='ashore'){ armR.rotation.z=Math.sin(t*6)*.3+(Math.floor(t)%6===0?1.2:0); } else armR.rotation.z=0;
+    // wake
+    if(mode==='sail'&&Math.abs(B.v)>1&&now-lastWake>90){ lastWake=now; const w=wakes[wakeIdx++%wakes.length]; w.position.set(B.x-Math.sin(B.h)*1.3,.12,B.z-Math.cos(B.h)*1.3); w.userData.life=1; w.scale.setScalar(.6); }
+    wakes.forEach(w=>{ if(w.userData.life>0){ w.userData.life-=dt*.6; w.scale.multiplyScalar(1+dt*1.2); w.material.opacity=Math.max(0,w.userData.life*.55); } });
+    // life
+    foams.forEach(f=>f.material.opacity=.22+Math.sin(t*1.4+f.userData.phase)*.1);
+    gulls.forEach(g=>{ const u=g.userData, a=t*u.sp+u.ph; g.position.set(u.cx+Math.cos(a)*u.r,u.h+Math.sin(a*2)*.4,u.cz+Math.sin(a)*u.r); g.rotation.y=-a; const f=Math.sin(t*8+u.ph)*.5; u.wl.rotation.z=f; u.wr.rotation.z=-f; });
+    const ch=islands.about.localToWorld(islands.about.userData.chimney.clone());
+    smoke.forEach(s=>{ s.userData.t=(s.userData.t+dt*.18)%1; const k=s.userData.t; s.position.set(ch.x+Math.sin(k*6+t)*.2,ch.y+k*2.4,ch.z-k*.6); s.scale.setScalar(.6+k*1.4); s.material.opacity=.55*(1-k); });
+    beam.rotation.y=t*.8; beam.userData.m.opacity=env.lights*.1;
+    radioLed.material.color.set((t%1.4)<.7?0xff4a3a:0x551a14);
+    bottle.position.y=.6+Math.sin(t*2)*.03; bottle.rotation.x=Math.sin(t*1.5)*.15;
+    flags.forEach((f,i)=>{ f.rotation.y=Math.sin(t*2+i)*.15; });
+    if(pingT){ const k=(now-pingT)/700; if(k>1){ pingT=0; ping.material.opacity=0; } else { ping.scale.setScalar(1+k*1.5); ping.material.opacity=(1-k)*.8; } }
+    // camera
+    const goal=camGoal(), lk=camMode==='intro'?.02:.05;
+    camT.lerp(goal.t,lk); camP.lerp(goal.p,lk*.9); camera.position.copy(camP); camera.lookAt(camT);
+    off.x+=(offT.x-off.x)*.08; off.y+=(offT.y-off.y)*.08;
+    if(Math.abs(off.x)>.5||Math.abs(off.y)>.5) camera.setViewOffset(innerWidth,innerHeight,off.x,off.y,innerWidth,innerHeight); else if(camera.view&&camera.view.enabled) camera.clearViewOffset();
+    // sun follows view
+    const sd=V(Math.cos(env.az)*Math.cos(env.el),Math.sin(env.el),Math.sin(env.az)*Math.cos(env.el));
+    sun.target.position.copy(camT); sun.position.copy(camT).addScaledVector(sd,60);
+    renderer.render(scene,camera);
+    // signs
+    if(!signsEl.hidden) ORDER.forEach(id=>{ const c=IS[id]; tmp.set(c.cx??c.x,c.signY,c.cz??c.z).project(camera); const el=IS[id].el, vis=tmp.z<1&&Math.abs(tmp.x)<1.1&&Math.abs(tmp.y)<1.1;
+      el.style.visibility=vis?'visible':'hidden'; if(vis) el.style.transform=`translate(${((tmp.x+1)/2*innerWidth).toFixed(1)}px,${((1-tmp.y)/2*innerHeight).toFixed(1)}px) translate(-50%,-100%)`; });
+    if(now-lastChart>100){ lastChart=now; drawChart(); }
+  }
+  LANG_HOOKS.push(()=>{ todLabel(); if(nearDock) promptEl.innerHTML=promptHTML(nearDock); if(panelId) fillPanel(panelId,true);
+    flags.forEach(f=>{ f.material.map.dispose(); f.material.map=f.userData.mk(); f.material.needsUpdate=true; });
+    const h=$('#hint'); if(!h.hidden) h.textContent=hintText(); });
+  requestAnimationFrame(frame);
+  $('#enterBtn').disabled=false; enterState='ready'; applyEnter();
+  window.__isl={go,enter,leave,setHour:h=>{ PRESETS[1]=h; presetIdx=1; targetHour=curHour=h; applyTime(h); todLabel(); },state:()=>({mode,at,B:{...B}})};
+}
+</script>
+
+</body>
+</html>
