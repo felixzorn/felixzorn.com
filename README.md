@@ -1,4 +1,4 @@
-# deinname.dev
+# felixzorn.com
 
 Mein Portfolio als **Inselreise**: Ein Boot fährt zu fünf Inseln, eine kleine Figur geht an Land, und jede Insel ist ein Kapitel (Über mich, Projekte, Erfahrung, Skills, Kontakt). Licht und Stimmung folgen der Uhrzeit des Besuchers.
 
@@ -67,27 +67,27 @@ Verwendet werden Gabarito, Figtree, JetBrains Mono und Kalam.
 Einzelnes Binary:
 
 ```sh
-CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o deinname-dev .
-ADDR=:8080 ./deinname-dev
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o felixzorn-dev .
+ADDR=:8080 ./felixzorn-dev
 ```
 
 Für einen Linux-Server von macOS oder Windows aus:
 
 ```sh
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o deinname-dev .
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o felixzorn-dev .
 ```
 
 Docker:
 
 ```sh
-docker build -t deinname-dev .
-docker run -p 8080:8080 deinname-dev
+docker build -t felixzorn-dev .
+docker run -p 8080:8080 felixzorn-dev
 ```
 
 HTTPS übernimmt am einfachsten ein Reverse Proxy davor, zum Beispiel Caddy:
 
 ```
-deinname.dev {
+felixzorn.com {
     reverse_proxy localhost:8080
 }
 ```

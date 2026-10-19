@@ -1,4 +1,4 @@
-// deinname.dev: liefert die Inselreise (web/index.html) aus einem einzigen Go-Binary aus.
+// felixzorn.com: liefert die Inselreise (web/index.html) aus einem einzigen Go-Binary aus.
 //
 //	go run .            # http://localhost:8080
 package main
@@ -37,7 +37,7 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-	log.Printf("deinname.dev läuft auf %s", addr)
+	log.Printf("felixzorn.com läuft auf %s", addr)
 	log.Fatal(srv.ListenAndServe())
 }
 
